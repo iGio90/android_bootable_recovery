@@ -203,6 +203,7 @@ get_args(int *argc, char ***argv) {
     if (*argc <= 1) {
         FILE *fp = fopen_path(COMMAND_FILE, "r");
         if (fp != NULL) {
+            char *token;
             char *argv0 = (*argv)[0];
             *argv = (char **) malloc(sizeof(char *) * MAX_ARGS);
             (*argv)[0] = argv0;  // use the same program name
@@ -210,7 +211,12 @@ get_args(int *argc, char ***argv) {
             char buf[MAX_ARG_LENGTH];
             for (*argc = 1; *argc < MAX_ARGS; ++*argc) {
                 if (!fgets(buf, sizeof(buf), fp)) break;
-                (*argv)[*argc] = strdup(strtok(buf, "\r\n"));  // Strip newline.
+                token = strtok(buf, "\r\n");
+                if (token != NULL) {
+                    (*argv)[*argc] = strdup(token);  // Strip newline.
+                } else {
+                    --*argc;
+                }
             }
 
             check_and_fclose(fp, COMMAND_FILE);
@@ -718,12 +724,8 @@ prompt_and_wait() {
                 }
                 break;
 
-            case ITEM_APPLY_SDCARD:
+            case ITEM_APPLY_ZIP:
                 show_install_update_menu();
-                break;
-
-            case ITEM_APPLY_SIDELOAD:
-                apply_from_adb();
                 break;
 
             case ITEM_NANDROID:
@@ -812,11 +814,15 @@ main(int argc, char **argv) {
         if (strstr(argv[0], "erase_image") != NULL)
             return erase_image_main(argc, argv);
         if (strstr(argv[0], "mkyaffs2image") != NULL)
-            return mkyaffs2image_main(argc, argv);
+             return mkyaffs2image_main(argc, argv);
+        if (strstr(argv[0], "make_ext4fs") != NULL)
+            return make_ext4fs_main(argc, argv);
         if (strstr(argv[0], "unyaffs") != NULL)
             return unyaffs_main(argc, argv);
         if (strstr(argv[0], "nandroid"))
             return nandroid_main(argc, argv);
+        if (strstr(argv[0], "bu") == argv[0] + strlen(argv[0]) - 2)
+            return bu_main(argc, argv);
         if (strstr(argv[0], "reboot"))
             return reboot_main(argc, argv);
 #ifdef BOARD_RECOVERY_HANDLES_MOUNT
@@ -831,6 +837,8 @@ main(int argc, char **argv) {
         }
         if (strstr(argv[0], "setprop"))
             return setprop_main(argc, argv);
+        if (strstr(argv[0], "getprop"))
+            return getprop_main(argc, argv);
         return busybox_driver(argc, argv);
     }
     __system("/sbin/postrecoveryboot.sh");
